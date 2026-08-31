@@ -19,7 +19,7 @@ acces.txt
 /node_modules
 /vendor
 /public/build
-
+tmp/
 /.codex
 /.cursor/
 /.idea
