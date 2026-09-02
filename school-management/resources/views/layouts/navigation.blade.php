@@ -3,11 +3,12 @@
     $canDeleteActivityNotifications = auth()->user()->can('activity.delete');
     $activityNotifications = collect(); $unreadActivityIds = collect(); $unreadActivityCount = 0; $latestActivityAt = now()->toISOString();
     if ($canViewActivityNotifications) {
-        $activityQuery = \Spatie\Activitylog\Models\Activity::query()->with(['causer', 'subject'])->where('log_name', '!=', 'connexion')->latest();
+        $activityQuery = \Spatie\Activitylog\Models\Activity::query()->with(['causer', 'subject'])->latest();
         $activityNotifications = (clone $activityQuery)->get();
         $latestActivityAt = optional($activityNotifications->first()?->created_at)->toISOString() ?? now()->toISOString();
         $lastSeen = auth()->user()->activity_notifications_read_at;
-        $unreadActivityIds = (clone $activityQuery)->when($lastSeen, fn ($query) => $query->where('created_at', '>', $lastSeen))->pluck('id');
+        $readIds = auth()->user()->activity_notifications_read_ids ?? [];
+        $unreadActivityIds = (clone $activityQuery)->when($lastSeen, fn ($query) => $query->where('created_at', '>', $lastSeen))->whereNotIn('id', $readIds)->pluck('id');
         $unreadActivityCount = $unreadActivityIds->count();
     }
 @endphp
@@ -39,8 +40,8 @@ let latestActivityAt='{{ $latestActivityAt }}';
 function updateActivityBadge(count){const badge=document.getElementById('activity-badge');if(!badge)return;badge.textContent=count>99?'99+':count;badge.classList.toggle('hidden',!count)}
 function activityRow(activity,isNew=true){const row=document.createElement('div');row.dataset.activityId=activity.id;row.className='activity-entry border-b border-slate-100 py-4'+(isNew?' is-new -mx-2 rounded-lg bg-slate-100/70 px-2':'');row.innerHTML=`<div class="flex gap-3"><span class="activity-new-dot mt-1 h-2.5 w-2.5 shrink-0 rounded-full bg-red-500 ${isNew?'':'hidden'}"></span><div class="min-w-0"><p class="text-sm font-medium text-slate-800"></p><p class="mt-1 text-xs text-slate-500"></p></div></div>`;row.querySelector('p').textContent=activity.description;row.querySelectorAll('p')[1].textContent=activity.causer+' · '+activity.displayed_at;return row}
 async function refreshActivityFeed(){try{const response=await fetch(`{{ route('activity-notifications.feed') }}?after=${encodeURIComponent(latestActivityAt)}`,{headers:{Accept:'application/json'}});if(!response.ok)return;const data=await response.json();data.activities.forEach(activity=>{if(document.querySelector(`[data-activity-id="${activity.id}"]`))return;const list=document.getElementById('activity-history-list');document.getElementById('no-activity-message')?.remove();const row=activityRow(activity,true);list.prepend(row);if(typeof bindActivityLongPress==='function')bindActivityLongPress(row);latestActivityAt=activity.created_at});updateActivityBadge(data.unread_count)}catch(error){}}
-function openActivityModal(){document.getElementById('activity-history-modal').classList.remove('hidden');document.getElementById('activity-history-modal').classList.add('flex');fetch('{{ route('activity-notifications.read') }}',{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,Accept:'application/json'}}).then(()=>updateActivityBadge(0))}
-function closeActivityModal(){document.querySelectorAll('.activity-entry.is-new').forEach(row=>{row.classList.remove('is-new','-mx-2','rounded-lg','bg-slate-100/70','px-2');row.querySelector('.activity-new-dot')?.classList.add('hidden')});document.getElementById('activity-history-modal').classList.add('hidden');document.getElementById('activity-history-modal').classList.remove('flex')}
+function openActivityModal(){document.getElementById('activity-history-modal').classList.remove('hidden');document.getElementById('activity-history-modal').classList.add('flex')}
+function closeActivityModal(){document.getElementById('activity-history-modal').classList.add('hidden');document.getElementById('activity-history-modal').classList.remove('flex')}
 @if($canDeleteActivityNotifications)
 let activitySelectionMode=false,activityPressTimer=null;
 function activityCheckbox(row){let box=row.querySelector('.activity-select');if(!box){box=document.createElement('input');box.type='checkbox';box.className='activity-select mt-1 h-4 w-4 rounded border-slate-300 text-emerald-700';box.addEventListener('click',event=>event.stopPropagation());row.querySelector('.flex').prepend(box)}return box}
@@ -58,6 +59,6 @@ setInterval(refreshActivityFeed,5000);
 const activityUrlMap=@json($activityNotifications->mapWithKeys(fn($activity)=>[$activity->id=>\App\Services\ActivityDestinationResolver::url($activity)]));
 if(typeof activityRow==='function'){const originalActivityRow=activityRow;activityRow=function(activity,isNew=true){const row=originalActivityRow(activity,isNew);row.dataset.activityUrl=activity.url||activityUrlMap[activity.id]||'';row.classList.add('cursor-pointer','hover:bg-emerald-50/60');return row;};}
 document.querySelectorAll('.activity-entry').forEach(row=>row.classList.add('cursor-pointer','hover:bg-emerald-50/60'));
-document.addEventListener('click',event=>{const row=event.target.closest('.activity-entry');if(!row||event.target.closest('input,button,a')||(typeof activitySelectionMode!=='undefined'&&activitySelectionMode))return;const url=row.dataset.activityUrl||activityUrlMap[row.dataset.activityId];if(url)window.location.href=url;});
+document.addEventListener('click',async event=>{const row=event.target.closest('.activity-entry');if(!row||event.target.closest('input,button,a')||(typeof activitySelectionMode!=='undefined'&&activitySelectionMode))return; if(row.classList.contains('is-new')){await fetch('{{ route('activity-notifications.read') }}',{method:'POST',headers:{'X-CSRF-TOKEN':document.querySelector('meta[name=csrf-token]').content,'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({id:Number(row.dataset.activityId)})});row.classList.remove('is-new','-mx-2','rounded-lg','bg-slate-100/70','px-2');row.querySelector('.activity-new-dot')?.classList.add('hidden');const badge=document.getElementById('activity-badge');updateActivityBadge(Math.max(0,Number(badge?.textContent||0)-1));}const url=row.dataset.activityUrl||activityUrlMap[row.dataset.activityId];if(url)window.location.href=url;});
 </script>
 @endif

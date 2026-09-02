@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'first_name', 'last_name', 'nickname', 'professional_number', 'teaching_subjects', 'email', 'phone', 'photo_path', 'cin', 'birth_date', 'birth_place', 'address', 'emergency_contact', 'contract_type', 'contract_start_date', 'contract_end_date', 'leave_start_date', 'leave_end_date', 'monthly_salary_amount', 'salary_payment_day', 'salary_payment_method', 'salary_payment_phone', 'salary_payment_transaction_hint', 'salary_payment_bank_details', 'password', 'is_active', 'activity_notifications_read_at'])]
+    #[Fillable(['name', 'first_name', 'last_name', 'nickname', 'professional_number', 'teaching_subjects', 'email', 'phone', 'photo_path', 'cin', 'birth_date', 'birth_place', 'address', 'emergency_contact', 'contract_type', 'contract_start_date', 'contract_end_date', 'leave_start_date', 'leave_end_date', 'monthly_salary_amount', 'salary_payment_day', 'salary_payment_method', 'salary_payment_phone', 'salary_payment_transaction_hint', 'salary_payment_bank_details', 'password', 'is_active', 'activity_notifications_read_at', 'activity_notifications_read_ids'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -35,6 +35,7 @@ class User extends Authenticatable
             'leave_start_date' => 'date',
             'leave_end_date' => 'date',
             'activity_notifications_read_at' => 'datetime',
+            'activity_notifications_read_ids' => 'array',
             'monthly_salary_amount' => 'decimal:2',
         ];
     }

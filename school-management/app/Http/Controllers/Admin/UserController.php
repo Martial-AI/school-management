@@ -189,7 +189,7 @@ class UserController extends Controller
             'email' => ['required', 'email', 'max:255', $user ? 'unique:users,email,'.$user->id : 'unique:users,email'],
             'phone' => ['nullable', 'string', 'max:30'], 'cin' => ['nullable', 'string', 'max:50', $user ? 'unique:users,cin,'.$user->id : 'unique:users,cin'],
             'photo' => ['nullable', 'image', 'max:5120'],
-            'teaching_subjects' => ['nullable', 'string', 'max:500'],
+            'teaching_subjects' => ['nullable'],
             'teacher_class_ids' => ['nullable', 'array'], 'teacher_class_ids.*' => ['integer', 'exists:school_classes,id'],
             'birth_date' => ['nullable', 'date'], 'birth_place' => ['nullable', 'string', 'max:150'], 'address' => ['nullable', 'string', 'max:1000'], 'emergency_contact' => ['nullable', 'string', 'max:255'],
             'contract_type' => ['nullable', 'in:CDI,CDD,Stage,Prestataire'], 'contract_start_date' => ['nullable', 'date'], 'contract_end_date' => ['nullable', 'date', 'after_or_equal:contract_start_date'],
@@ -213,15 +213,12 @@ class UserController extends Controller
         if ($role !== 'Prof') return;
 
         $classIds = collect($request->input('teacher_class_ids', []))->map(fn ($id) => (int) $id)->filter()->unique();
-        $subjectName = trim((string) $request->input('teaching_subjects', ''));
-        if ($classIds->isEmpty() || $subjectName === '') return;
-
-        $subject = Subject::firstOrCreate(
-            ['name' => $subjectName],
-            ['code' => 'CUSTOM-'.strtoupper(substr(md5($subjectName), 0, 10)), 'coefficient' => 1, 'is_active' => true],
-        );
+        $rawSubjects = $request->input('teaching_subjects', []);
+        $subjectNames = collect(is_array($rawSubjects) ? $rawSubjects : explode(',', (string) $rawSubjects))->map('trim')->filter()->unique();
+        if ($classIds->isEmpty() || $subjectNames->isEmpty()) return;
+        $subjects = Subject::whereIn('name', $subjectNames)->where('is_active', true)->get();
         foreach ($classIds as $classId) {
-            TeacherAssignment::create(['teacher_id' => $user->id, 'school_class_id' => $classId, 'subject_id' => $subject->id]);
+            foreach ($subjects as $subject) TeacherAssignment::create(['teacher_id' => $user->id, 'school_class_id' => $classId, 'subject_id' => $subject->id]);
         }
     }
 

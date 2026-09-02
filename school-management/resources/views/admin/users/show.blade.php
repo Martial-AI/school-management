@@ -81,6 +81,9 @@ window.submitSalaryPayment=function(){
 <section class="mx-auto mb-6 max-w-5xl rounded-2xl border border-orange-200 bg-orange-50 p-5">
     <div class="flex flex-wrap items-center justify-between gap-3"><div><h4 class="font-semibold text-orange-900">{{ __('Contract management') }}</h4><p class="text-sm text-orange-800">{{ __('End this contract today.') }}</p></div><form method="POST" action="{{ route('admin.users.end-contract', $user) }}">@csrf @method('PATCH')<button type="button" onclick="openAccountSecurityModal(this.closest('form'), '{{ __('End contract') }}', false)" class="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-800 focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2">{{ __('End contract') }}</button></form></div>
 </section>
+@if($user->contract_type === 'CDI')
+<script>document.addEventListener('DOMContentLoaded',()=>{document.querySelectorAll('dt').forEach(el=>{if(el.textContent.trim()==={{ Js::from(__('Contract duration')) }})el.textContent={{ Js::from(__('Contract start date')) }};});});</script>
+@endif
 @endif
 <script>
 document.addEventListener('DOMContentLoaded',()=>{

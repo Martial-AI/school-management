@@ -35,7 +35,10 @@ class AppServiceProvider extends ServiceProvider
                 'device_browser' => request()->input('device_browser') ?: DeviceNameResolver::browserFromUserAgent(request()->userAgent()),
                 'logged_in_at' => now(),
             ]);
-            activity('connexion')->causedBy($event->user)->performedOn($event->user)->log('s’est connecté');
+            $device = request()->input('device_model') ?: DeviceNameResolver::modelFromUserAgent(request()->userAgent()) ?: __('Unknown device');
+            $platform = DeviceNameResolver::platformFromUserAgent(request()->userAgent());
+            $browser = request()->input('device_browser') ?: DeviceNameResolver::browserFromUserAgent(request()->userAgent());
+            activity('connexion')->causedBy($event->user)->performedOn($event->user)->log(sprintf('Nouvelle connexion — appareil: %s | plateforme: %s | navigateur: %s | IP: %s', $device, $platform, $browser, request()->ip() ?: '—'));
         });
 
         Event::listen(Logout::class, function (Logout $event): void {
